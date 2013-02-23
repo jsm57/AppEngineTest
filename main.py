@@ -15,11 +15,55 @@
 # limitations under the License.
 #
 import webapp2
+import jinja2
+import os
+
+from google.appengine.ext import ndb
+
+
+jinja_environment = jinja2.Environment(
+    loader=jinja2.FileSystemLoader(os.path.dirname(__file__)),
+    extensions=['jinja2.ext.autoescape'])
+
+SN_Devices = [
+    {'name':"001", 'desc':"NYC"},
+    {'name':"002", 'desc':"UGA"},
+    {'name':"003", 'desc':"RIVERSIDE"},
+    {'name':"004", 'desc':"YALE"}]
+
+class Sensor(ndb.Model):
+    name = ndb.StringProperty()
+    desc = ndb.StringProperty()
+
 
 class MainHandler(webapp2.RequestHandler):
     def get(self):
-        self.response.write('Hello world!')
+        # Use Google Charts API
+        
+        DEFAULT_DEV = "Default Device"
+        
+        sensor_q = Sensor.query()
+        sensors = sensor_q.fetch(100)
+        
+        template = jinja_environment.get_template('index.html')
+        self.response.write(template.render(device=DEFAULT_DEV,sensors=sensors))
+
+class AddSensorHandler(webapp2.RequestHandler):
+    def get(self):
+        template = jinja_environment.get_template('addsensor.html')
+        self.response.write(template.render())
+        
+    def post(self):
+        newSensor = Sensor()
+        # newData = JSON.parse(self.request.get('data'))
+        # newSensor.name = newData.name # may be a dictionary??
+        newSensor.name = self.request.get('name')
+        newSensor.desc = self.request.get('desc')
+        newSensor.put()
+        # Good form to send the poster to somewhere (home page?)
+        self.redirect('/')
 
 app = webapp2.WSGIApplication([
-    ('/', MainHandler)
+    ('/', MainHandler),
+    ('/add', AddSensorHandler)
 ], debug=True)
